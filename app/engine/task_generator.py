@@ -42,6 +42,11 @@ class AgentTaskList:
         return self.current_revenue / self.monthly_target
 
 
+def _s(value) -> str:
+    """None安全な文字列変換"""
+    return str(value) if value else ""
+
+
 def _parse_date_safe(value) -> Optional[date]:
     """安全に日付パース"""
     if not value:
@@ -101,13 +106,13 @@ class TaskEngine:
         # CA一覧を取得（担当者が入っている取引から）
         agents = set()
         for deal in self.deals:
-            agent = deal.get("agent_name")
-            if agent and agent.strip():
+            agent = deal.get("agent_name") or ""
+            if agent.strip():
                 agents.add(agent.strip())
 
         result = {}
         for agent in agents:
-            agent_deals = [d for d in self.deals if d.get("agent_name", "").strip() == agent]
+            agent_deals = [d for d in self.deals if (d.get("agent_name") or "").strip() == agent]
             task_list = self._generate_for_agent(agent, agent_deals)
             result[agent] = task_list
 
@@ -135,7 +140,7 @@ class TaskEngine:
         )
 
         for deal in deals:
-            status = deal.get("status", "").strip()
+            status = (deal.get("status") or "").strip()
             tasks = self._generate_tasks_for_deal(deal, status)
             task_list.tasks.extend(tasks)
 
@@ -148,8 +153,8 @@ class TaskEngine:
     def _generate_tasks_for_deal(self, deal: dict, status: str) -> list[Task]:
         """1取引からタスクを生成"""
         tasks = []
-        candidate = deal.get("candidate_name", "不明")
-        agent = deal.get("agent_name", "")
+        candidate = deal.get("candidate_name") or "不明"
+        agent = deal.get("agent_name") or ""
         amount = deal.get("gross_profit") or deal.get("estimated_amount")
         if isinstance(amount, str):
             amount = None
@@ -175,7 +180,7 @@ class TaskEngine:
                 ))
             else:
                 # 未アポ → 即架電
-                source = deal.get("deal_source", "")
+                source = deal.get("deal_source") or ""
                 is_urgent = "顕在層" in source or "リスティング" in source
                 urgency_note = "競合バッティング注意。即架電" if is_urgent else "アポ獲得"
                 if self.seasonal.get("name") == "high_speed":
@@ -372,7 +377,7 @@ class TaskEngine:
         scored = []
         for deal in mql_deals:
             score = 0
-            segment = deal.get("segment", "")
+            segment = _s(deal.get("segment"))
             if "Aセグ" in segment:
                 score += 3
             elif "Bセグ" in segment:
@@ -380,7 +385,7 @@ class TaskEngine:
             elif "Cセグ" in segment:
                 score += 1
             # 受注予測月が近いほどスコアUP
-            forecast = deal.get("forecast_month", "")
+            forecast = _s(deal.get("forecast_month"))
             if forecast and str(self.today.month) in forecast:
                 score += 5
             scored.append((score, deal))
@@ -389,9 +394,9 @@ class TaskEngine:
 
         # 上位3件を推奨
         for _, deal in scored[:3]:
-            candidate = deal.get("candidate_name", "不明")
-            segment = deal.get("segment", "")
-            source = deal.get("deal_source", "")
+            candidate = _s(deal.get("candidate_name")) or "不明"
+            segment = _s(deal.get("segment"))
+            source = _s(deal.get("deal_source"))
             tasks.append(Task(
                 priority=9,
                 priority_label=_priority_label(9),
@@ -410,13 +415,13 @@ class TaskEngine:
         win_rates = self.config.get("forecast", {}).get("win_rates", {})
 
         for deal in deals:
-            status = deal.get("status", "")
+            status = _s(deal.get("status"))
             profit = deal.get("gross_profit")
             if not profit or not isinstance(profit, (int, float)):
                 continue
 
-            difficulty = deal.get("difficulty", "")
-            is_difficult = bool(difficulty and "難あり" in str(difficulty))
+            difficulty = _s(deal.get("difficulty"))
+            is_difficult = bool(difficulty and "難あり" in difficulty)
 
             if status == "求まる済み":
                 rate = win_rates.get("求まる済み", 0.33)
@@ -440,7 +445,7 @@ class TaskEngine:
         """当月の確定受注金額（内定承諾以上）"""
         total = 0
         for deal in deals:
-            status = deal.get("status", "")
+            status = _s(deal.get("status"))
             if status in ("内定承諾", "請求管理シート反映済み", "入金確認済み"):
                 profit = deal.get("gross_profit")
                 if profit and isinstance(profit, (int, float)):

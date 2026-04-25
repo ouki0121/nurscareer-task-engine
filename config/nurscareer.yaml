@@ -17,8 +17,8 @@ sheets:
     invoices:
       name: "★請求管理シート"
       gid: 411151869
-      header_row: 1
-      data_start_row: 2
+      header_row: 2  # 行1は"F"のみ、行2がヘッダー
+      data_start_row: 3
     ca_targets:
       name: "KPI管理（週次）"
       gid: 853694422
