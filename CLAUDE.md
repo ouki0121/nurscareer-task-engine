@@ -31,6 +31,11 @@ Slack DM (CA別にタスク投稿)
 | KPI管理（週次） | 853694422 | ca_targets |
 | 自動転送ログ | 2011711249 | lead_transfer_log |
 | 医療法人DB | 1123026588 | companies |
+| 求職者DB | - | job_seekers |
+
+## v1 アーキテクチャ
+v1はBQ不要。Sheets API直読みでタスク生成 → Slack投稿。
+BQ同期は v2 で追加（権限問題を回避）。
 
 Spreadsheet ID: `1A2M9_FhcCzLQsxJ7H3OwOrfEgWjDpezzBu6SBboJFck`
 

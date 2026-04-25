@@ -9,6 +9,7 @@ from .sheets_reader import (
     read_companies,
     read_ca_targets,
     read_lead_transfer_log,
+    read_job_seekers,
 )
 from .bq_writer import (
     get_bq_client,
@@ -104,5 +105,29 @@ def run_sync() -> dict:
     except Exception as e:
         results["lead_transfer_log"] = {"status": "error", "message": str(e)}
         logger.error(f"lead_transfer_log sync failed: {e}")
+
+    # 5. 求職者DB → job_seekers
+    try:
+        raw_seekers = read_job_seekers(sheets_client, config)
+        job_seekers = [
+            {
+                "job_seeker_id": r.get("求職者ID", "") or None,
+                "line_user_id": r.get("LINE UserID", "") or None,
+                "candidate_name": r.get("求職者名", "") or None,
+                "first_registration_date": r.get("初回登録日", "") or None,
+                "friend_registration_month": r.get("友達登録月", "") or None,
+                "first_channel": r.get("初回流入チャネル", "") or None,
+                "segment": r.get("セグメント", "") or None,
+                "deal_count": int(r.get("取引数", "0") or "0"),
+            }
+            for r in raw_seekers
+            if r.get("求職者名", "").strip()
+        ]
+        count = load_to_bq(bq_client, dataset, "job_seekers", job_seekers)
+        results["job_seekers"] = {"status": "ok", "rows": count}
+        logger.info(f"job_seekers: {count} rows synced")
+    except Exception as e:
+        results["job_seekers"] = {"status": "error", "message": str(e)}
+        logger.error(f"job_seekers sync failed: {e}")
 
     return results

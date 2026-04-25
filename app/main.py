@@ -1,9 +1,12 @@
 """Cloud Run エントリポイント
 
 エンドポイント:
-  POST /sync          - Sheets → BQ 同期（10分に1回 Cloud Scheduler から呼ばれる）
+  POST /sync          - Sheets → BQ 同期（v2で使用。v1では不要）
   POST /generate-tasks - タスク生成 + Slack投稿（毎朝8:00 JST）
   GET  /health        - ヘルスチェック
+
+v1: Sheets API直読み（BQ不要）
+v2: BQ経由（Sheets → BQ同期 → BQクエリ）
 """
 
 import os
@@ -30,7 +33,7 @@ def health():
 
 @app.route("/sync", methods=["POST"])
 def sync():
-    """Sheets → BQ 同期"""
+    """Sheets → BQ 同期（v2用。v1ではスキップ可能）"""
     try:
         from .sync.runner import run_sync
         results = run_sync()
@@ -42,30 +45,45 @@ def sync():
 
 @app.route("/generate-tasks", methods=["POST"])
 def generate_tasks():
-    """タスク生成 + Slack投稿"""
+    """タスク生成 + Slack投稿（v1: Sheets API直読み）"""
     try:
         config = load_config()
-        gcp = config["gcp"]
 
-        # BQからデータ読み取り
-        from google.cloud import bigquery
-        from google.oauth2.service_account import Credentials
+        # v1: Sheets APIから直接読み取り
+        from .sync.sheets_reader import (
+            get_sheets_client,
+            read_deals,
+            read_invoices,
+        )
+        from .sync.bq_writer import (
+            transform_deal_record,
+            transform_invoice_record,
+        )
 
-        creds_path = os.path.expanduser(gcp["credentials_path"])
-        credentials = Credentials.from_service_account_file(creds_path)
-        bq_client = bigquery.Client(project=gcp["project_id"], credentials=credentials)
-        dataset = gcp["dataset"]
+        sheets_client = get_sheets_client()
 
-        # deals テーブル読み取り
-        deals_query = f"SELECT * FROM `{gcp['project_id']}.{dataset}.deals`"
-        deals = [dict(row) for row in bq_client.query(deals_query).result()]
+        # ヨミ表（deals）読み取り + 正規化
+        logger.info("Reading deals from Sheets...")
+        raw_deals = read_deals(sheets_client, config)
+        deals = [
+            transform_deal_record(r, i)
+            for i, r in enumerate(raw_deals, start=1)
+            if r.get("求職者名", "").strip()
+        ]
+        logger.info(f"Loaded {len(deals)} deals")
 
-        # invoices テーブル読み取り
-        invoices_query = f"SELECT * FROM `{gcp['project_id']}.{dataset}.invoices`"
-        invoices = [dict(row) for row in bq_client.query(invoices_query).result()]
+        # 請求管理シート（invoices）読み取り + 正規化
+        logger.info("Reading invoices from Sheets...")
+        raw_invoices = read_invoices(sheets_client, config)
+        invoices = [
+            transform_invoice_record(r, i)
+            for i, r in enumerate(raw_invoices, start=1)
+            if r.get("法人名", "").strip()
+        ]
+        logger.info(f"Loaded {len(invoices)} invoices")
 
-        # CA別目標（BQまたはconfigから。v1はconfig固定値で代用可能）
-        ca_targets = _load_ca_targets(bq_client, gcp["project_id"], dataset)
+        # CA別目標（v1は空。v2でKPI週次から取得）
+        ca_targets = {}
 
         # タスク生成
         from .engine.task_generator import TaskEngine
@@ -77,30 +95,40 @@ def generate_tasks():
         )
         all_tasks = engine.generate_all()
 
+        # dry_run パラメータでSlack投稿をスキップ可能
+        dry_run = request.args.get("dry_run", "false").lower() == "true"
+
+        if dry_run:
+            # dry_run: Slack投稿せずプレビューを返す
+            from .notifier.slack_poster import format_task_list
+            results = {}
+            for agent_name, task_list in all_tasks.items():
+                results[agent_name] = {
+                    "task_count": len(task_list.tasks),
+                    "message": format_task_list(task_list),
+                }
+            return jsonify({
+                "status": "ok",
+                "mode": "dry_run",
+                "agents": len(all_tasks),
+                "results": results,
+            })
+
         # Slack投稿
         from .notifier.slack_poster import get_slack_client, post_tasks_to_slack
         slack_client = get_slack_client()
 
-        # dry_run パラメータでSlack投稿をスキップ可能
-        dry_run = request.args.get("dry_run", "false").lower() == "true"
-
         results = {}
         for agent_name, task_list in all_tasks.items():
-            if dry_run:
-                from .notifier.slack_poster import format_task_list
-                results[agent_name] = {
-                    "task_count": len(task_list.tasks),
-                    "message_preview": format_task_list(task_list)[:500],
-                }
-            else:
-                success = post_tasks_to_slack(slack_client, task_list)
-                results[agent_name] = {
-                    "task_count": len(task_list.tasks),
-                    "posted": success,
-                }
+            success = post_tasks_to_slack(slack_client, task_list)
+            results[agent_name] = {
+                "task_count": len(task_list.tasks),
+                "posted": success,
+            }
 
         return jsonify({
             "status": "ok",
+            "mode": "live",
             "agents": len(all_tasks),
             "results": results,
         })
@@ -108,18 +136,6 @@ def generate_tasks():
     except Exception as e:
         logger.error(f"Task generation failed: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
-def _load_ca_targets(bq_client, project_id: str, dataset: str) -> dict:
-    """CA別月間目標を取得。v1は空dictで返す（目標ギャップ計算はv2で精緻化）"""
-    try:
-        query = f"SELECT * FROM `{project_id}.{dataset}.ca_targets` LIMIT 1"
-        list(bq_client.query(query).result())
-        # TODO: KPI管理（週次）のCA別目標をパースする
-        return {}
-    except Exception:
-        logger.info("ca_targets table not found. Using empty targets (v1)")
-        return {}
 
 
 if __name__ == "__main__":

@@ -119,3 +119,16 @@ def read_lead_transfer_log(client: gspread.Client, config: dict) -> list[dict]:
         header_row=tab["header_row"],
         data_start_row=tab["data_start_row"],
     )
+
+
+def read_job_seekers(client: gspread.Client, config: dict) -> list[dict]:
+    """求職者DBを読み取り"""
+    sheets_config = config["sheets"]
+    tab = sheets_config["tabs"]["job_seekers"]
+    return read_sheet_as_records(
+        client=client,
+        spreadsheet_id=sheets_config["spreadsheet_id"],
+        tab_name=tab["name"],
+        header_row=tab["header_row"],
+        data_start_row=tab["data_start_row"],
+    )
