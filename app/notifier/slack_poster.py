@@ -139,14 +139,23 @@ def _generate_insights(task_list: AgentTaskList) -> list[str]:
     insights = []
     tasks = task_list.tasks
 
-    # 1. フォーム回答の滞留チェック
+    # 1. フォーム回答の件数異常チェック（10件超で警告）
     form_tasks = [t for t in tasks if t.category in ("フォーム回答アタック", "求人探索")]
-    stale_forms = [t for t in form_tasks if t.days_elapsed and t.days_elapsed > 30]
-    if stale_forms:
+    if len(form_tasks) > 10:
+        stale_count = sum(1 for t in form_tasks if t.days_elapsed and t.days_elapsed > 30)
         insights.append(
-            f"⚠️ フォーム回答のまま30日以上放置が *{len(stale_forms)}件*。"
-            f"対応不要ならMQLに変更してヨミ表をクリーンに保ちましょう"
+            f"🚨 フォーム回答ステータスが *{len(form_tasks)}件*（正常は10件以下）。アタックが疎かになっている可能性があります。"
+            f"\n  → 転職時期が今でない人は *MQL* に変更"
+            f"\n  → 自分の取引として確保したい人は受注月を明記して *SQL* に変更"
+            f"\n  →（30日以上放置: {stale_count}件）"
         )
+    elif form_tasks:
+        stale_forms = [t for t in form_tasks if t.days_elapsed and t.days_elapsed > 30]
+        if stale_forms:
+            insights.append(
+                f"⚠️ フォーム回答のまま30日以上放置が *{len(stale_forms)}件*。"
+                f"MQLかSQLへのステータス変更を検討してください"
+            )
 
     # 2. 求まる済みの滞留チェック
     match_tasks = [t for t in tasks if t.category == "面接セット推進"]
@@ -165,14 +174,20 @@ def _generate_insights(task_list: AgentTaskList) -> list[str]:
             f"面接後30分以内のフォロー電話が内定承諾率を大きく左右します"
         )
 
-    # 4. SQL時期切れチェック
+    # 4. SQL件数異常チェック（20件超で警告）+ 時期切れ
     sql_tasks = [t for t in tasks if t.category == "SQL時期到来"]
-    past_sql = [t for t in sql_tasks if "1月" in t.description or "2月" in t.description or "3月" in t.description]
-    if len(past_sql) > 3:
+    if len(sql_tasks) > 20:
         insights.append(
-            f"📋 受注予測月が過去のSQLが *{len(past_sql)}件*。"
-            f"時期を更新するか、アタック済みならステータスを進めましょう"
+            f"🚨 SQLが *{len(sql_tasks)}件*（正常は20件以下）。受注月が不確かなまま放置されている可能性があります。"
+            f"\n  → 一度コンタクトを取り、アタックする月を明確にしてG列（受注月）を更新してください"
         )
+    else:
+        past_sql = [t for t in sql_tasks if "1月" in t.description or "2月" in t.description or "3月" in t.description]
+        if len(past_sql) > 3:
+            insights.append(
+                f"📋 受注予測月が過去のSQLが *{len(past_sql)}件*。"
+                f"時期を更新するか、アタック済みならステータスを進めましょう"
+            )
 
     # 5. 目標ギャップと掘り起こし（バイネーム指示ではなく件数の示唆）
     if task_list.gap > 0:
