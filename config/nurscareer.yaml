@@ -1,0 +1,159 @@
+# ナースキャリア タスクエンジン設定
+# 仕様書: ~/.claude/projects/-Users-keitaiito/memory/nurscareer_ai_task_engine_spec.md
+
+gcp:
+  project_id: "skilled-loader-457802-c9"
+  dataset: "hr_nurse_career"
+  credentials_path: "~/.claude/secrets/bigquery-mcp.json"
+
+sheets:
+  spreadsheet_id: "1A2M9_FhcCzLQsxJ7H3OwOrfEgWjDpezzBu6SBboJFck"
+  tabs:
+    deals:
+      name: "セールスヨミ表"
+      gid: 2007688165
+      header_row: 50  # 行50がヘッダー
+      data_start_row: 51
+    invoices:
+      name: "★請求管理シート"
+      gid: 411151869
+      header_row: 1
+      data_start_row: 2
+    ca_targets:
+      name: "KPI管理（週次）"
+      gid: 853694422
+      header_row: 4
+      data_start_row: 5
+    lead_transfer_log:
+      name: "自動転送ログ"
+      gid: 2011711249
+      header_row: 1
+      data_start_row: 2
+    companies:
+      name: "医療法人DB"
+      gid: 1123026588
+      header_row: 1
+      data_start_row: 2
+
+sync:
+  interval_minutes: 10
+  mode: "upsert"  # 既存レコードも更新
+
+slack:
+  new_lead_channel: "C0959EFEA4Q"  # 新規リード通知チャネル
+
+# ステータス定義（M列 確定版 2026-04-25）
+statuses:
+  active:
+    - name: "フォーム回答"
+      phase: "リード"
+      ownership: "assigned"
+      task_priority: 1
+    - name: "SQL（展開可能×3ヶ月以内転職）"
+      phase: "リード（時期待ち）"
+      ownership: "assigned"
+      task_priority: 7
+    - name: "求まる済み"
+      phase: "商談"
+      ownership: "assigned"
+      win_rate: 0.33
+      task_priority: 4
+    - name: "不合格・再調整中"
+      phase: "リカバリー"
+      ownership: "assigned"
+      task_priority: 5
+    - name: "面接セット済み"
+      phase: "商談"
+      ownership: "assigned"
+      win_rate: 0.35
+      win_rate_difficult: 0.175  # 0.35 * 0.5
+      task_priority: 3
+    - name: "内定提示"
+      phase: "クロージング"
+      ownership: "assigned"
+      win_rate: 0.90
+      task_priority: 2
+    - name: "内定承諾"
+      phase: "成約"
+      ownership: "assigned"
+      win_rate: 1.00
+      task_priority: 10
+    - name: "早期退職（返金）"
+      phase: "返金/再展開"
+      ownership: "assigned"
+      task_priority: 6
+  pool:
+    - name: "MQL（展開可能×3ヶ月以降）"
+      phase: "休眠"
+      ownership: "shared"
+      task_priority: 9
+    - name: "請求管理シート反映済み"
+      phase: "入金待ち"
+      ownership: "none"
+      task_priority: 8
+    - name: "入金確認済み"
+      phase: "完了"
+      ownership: "none"
+      task_priority: 8
+
+# 受注予測計算の係数
+forecast:
+  win_rates:
+    求まる済み: 0.33
+    面接セット済み: 0.35
+    内定提示: 0.90
+  difficult_discount:
+    求まる済み: "variable"  # N37列の値を使用
+    面接セット済み: 0.5  # win_rate * 0.5
+
+# シーズナル変数
+seasonal:
+  high_speed:  # 競合バッティング期
+    months: [1, 2, 3]
+    context: "4月入職の繁忙期。競合エージェントとのバッティング増。スピード重視のデリバリーが必要"
+    emphasis: "即日アポ・即日求まる・即日面接セット"
+  nurturing:  # 準顕在層期
+    months: [4, 5]
+    context: "繁忙期後。準顕在層が安価CPAで取れる時期。辞めさせるトークが必要"
+    emphasis: "転職時期の正確な把握。ヨミ表管理を丁寧に"
+  normal:
+    months: [6, 7, 8, 9, 10, 11, 12]
+    context: "通常期"
+    emphasis: ""
+
+# 入社後フォロースケジュール（★請求管理シートのJ列=入職月を基準）
+follow_up:
+  schedule_months_after_start: [2, 4, 6, 8, 10, 12]
+  data_source: "invoices.入職月"  # ★請求管理シートJ列
+
+# ヨミ表カラムマッピング（行50がヘッダー）
+deals_columns:
+  registration_date: "B"     # 登録日
+  line_user_id: "C"          # LINE ID
+  friend_registration_month: "D"  # 友達登録月
+  agent_name: "E"            # 担当者
+  candidate_name: "F"        # 求職者名
+  forecast_month: "G"        # 受注予測月
+  start_month: "H"           # 入職予測月
+  deal_source: "I"           # 取引ソース（新規流入チャネル）
+  crm_channel: "J"           # CRMチャネル
+  referral_company: "K"      # IF／送客企業
+  segment: "L"               # セグメント
+  status: "M"                # 客観ステータス
+  subjective_status: "N"     # 主観ステータス
+  difficulty: "O"            # 難ありステータス
+  estimated_amount: "P"      # 見積・売上金額（税抜）
+  cost: "Q"                  # 原価（マージン）
+  gross_profit: "R"          # 売上総利益
+  refund_amount: "S"         # 返金・辞退金額
+  placement_company: "T"     # 入職先名
+  form_response_date: "U"    # フォーム回答日
+  first_appointment_date: "V"  # 初回アポ日
+  job_match_date: "W"        # 求人まる日
+  interview_date: "X"        # 面接予定日
+  offer_acceptance_date: "Y"  # 内定承諾日
+  payment_due_date: "Z"      # 入金予定日
+  refund_end_date: "AA"      # 返金規定終了日
+  re_expansion_month: "AB"   # 再展開アタック月
+  last_action_date: "AK"     # 最終アクション日
+  next_appointment: "AL"     # 次回アポ
