@@ -16,7 +16,22 @@ def get_slack_client() -> WebClient:
     return WebClient(token=token)
 
 
-MAX_TASKS_PER_CATEGORY = 5  # カテゴリ別の表示上限
+# フォーム回答（放置案件）のみ省略。他は全件表示
+FORM_RESPONSE_MAX = 5
+
+# 全カテゴリ定義（タスクエンジンの①〜⑩に対応）
+ALL_CATEGORIES = [
+    {"key": "フォーム回答アタック", "label": "① フォーム回答アタック", "includes": ["フォーム回答アタック", "求人探索"]},
+    {"key": "クロージング", "label": "② クロージング（内定提示）", "includes": ["クロージング"]},
+    {"key": "面接フォロー", "label": "③ 面接フォロー（面接セット済み）", "includes": ["面接フォロー"]},
+    {"key": "面接セット推進", "label": "④ 面接セット推進（求まる済み）", "includes": ["面接セット推進"]},
+    {"key": "リカバリー", "label": "⑤ リカバリー（不合格・再調整中）", "includes": ["リカバリー"]},
+    {"key": "早期退職対応", "label": "⑥ 早期退職対応", "includes": ["早期退職対応"]},
+    {"key": "SQL時期到来", "label": "⑦ SQL 時期到来アタック", "includes": ["SQL時期到来"]},
+    {"key": "入社後フォロー", "label": "⑧ 入社後フォロー", "includes": ["入社後フォロー"]},
+    {"key": "掘り起こし", "label": "⑨ MQL 掘り起こし", "includes": ["掘り起こし推奨"]},
+    {"key": "請求管理シート移行", "label": "⑩ 請求管理シート移行", "includes": ["請求管理シート移行"]},
+]
 
 
 def format_task_list(task_list: AgentTaskList) -> str:
@@ -45,39 +60,40 @@ def format_task_list(task_list: AgentTaskList) -> str:
         lines.append("✅ タスクなし。素晴らしい！")
         return "\n".join(lines)
 
-    # カテゴリ別にグルーピングして表示上限あり
-    current_priority_label = None
-    category_count = 0
-    category_hidden = 0
+    # カテゴリ別に分類
+    tasks_by_category = {}
+    for task in task_list.tasks:
+        tasks_by_category.setdefault(task.category, []).append(task)
+
     task_num = 1
 
-    for i, task in enumerate(task_list.tasks):
-        if task.priority_label != current_priority_label:
-            # 前のカテゴリの省略表示
-            if category_hidden > 0:
-                lines.append(f"   _...他{category_hidden}件_")
-            if current_priority_label is not None:
-                lines.append("")
-            current_priority_label = task.priority_label
-            category_count = 0
-            category_hidden = 0
-            lines.append(f"*【{task.priority_label}】{task.category}*")
+    for cat_def in ALL_CATEGORIES:
+        cat_tasks = []
+        for include_key in cat_def["includes"]:
+            cat_tasks.extend(tasks_by_category.get(include_key, []))
 
-        category_count += 1
-        if category_count <= MAX_TASKS_PER_CATEGORY:
-            amount_str = f"（¥{task.amount:,.0f}）" if task.amount else ""
-            elapsed_str = f"（{task.days_elapsed}日経過）" if task.days_elapsed else ""
-            lines.append(f"{task_num}. {task.candidate_name}{amount_str}{elapsed_str}")
-            lines.append(f"   → {task.description}")
-            task_num += 1
+        if cat_def["key"] == "フォーム回答アタック":
+            # フォーム回答のみ省略あり（放置案件が大量のため）
+            _render_form_response_section(lines, cat_tasks, cat_def["label"], task_num)
+            task_num += min(len(cat_tasks), FORM_RESPONSE_MAX)
+        elif cat_def["key"] == "掘り起こし":
+            # MQL掘り起こしはバイネーム指示しない。示唆セクションで言及
+            pass  # 示唆で扱う
+        elif cat_tasks:
+            # 他カテゴリは全件表示
+            lines.append(f"*【{cat_tasks[0].priority_label}】{cat_def['label']}*")
+            for task in cat_tasks:
+                amount_str = f"（¥{task.amount:,.0f}）" if task.amount else ""
+                elapsed_str = f"（{task.days_elapsed}日経過）" if task.days_elapsed else ""
+                lines.append(f"{task_num}. {task.candidate_name}{amount_str}{elapsed_str}")
+                lines.append(f"   → {task.description}")
+                task_num += 1
+            lines.append("")
         else:
-            category_hidden += 1
-
-    # 最後のカテゴリの省略表示
-    if category_hidden > 0:
-        lines.append(f"   _...他{category_hidden}件_")
-
-    lines.append("")
+            # 該当なしを明記
+            lines.append(f"*{cat_def['label']}*")
+            lines.append("   ✅ 該当なし")
+            lines.append("")
 
     # 示唆・アドバイスセクション
     insights = _generate_insights(task_list)
@@ -91,6 +107,31 @@ def format_task_list(task_list: AgentTaskList) -> str:
     lines.append("━" * 20)
 
     return "\n".join(lines)
+
+
+def _render_form_response_section(lines: list, tasks: list, label: str, start_num: int):
+    """フォーム回答セクション。直近5件+省略"""
+    if not tasks:
+        lines.append(f"*{label}*")
+        lines.append("   ✅ 該当なし")
+        lines.append("")
+        return
+
+    # 新しい順（days_elapsed昇順）でソート
+    sorted_tasks = sorted(tasks, key=lambda t: t.days_elapsed or 9999)
+
+    lines.append(f"*【{sorted_tasks[0].priority_label}】{label}*")
+    shown = 0
+    for task in sorted_tasks[:FORM_RESPONSE_MAX]:
+        amount_str = f"（¥{task.amount:,.0f}）" if task.amount else ""
+        elapsed_str = f"（{task.days_elapsed}日経過）" if task.days_elapsed else ""
+        lines.append(f"{start_num + shown}. {task.candidate_name}{amount_str}{elapsed_str}")
+        lines.append(f"   → {task.description}")
+        shown += 1
+
+    if len(sorted_tasks) > FORM_RESPONSE_MAX:
+        lines.append(f"   _...他{len(sorted_tasks) - FORM_RESPONSE_MAX}件（示唆を参照）_")
+    lines.append("")
 
 
 def _generate_insights(task_list: AgentTaskList) -> list[str]:
@@ -133,13 +174,13 @@ def _generate_insights(task_list: AgentTaskList) -> list[str]:
             f"時期を更新するか、アタック済みならステータスを進めましょう"
         )
 
-    # 5. 目標ギャップと掘り起こし
+    # 5. 目標ギャップと掘り起こし（バイネーム指示ではなく件数の示唆）
     if task_list.gap > 0:
         avg_unit_price = 900000  # 平均単価約90万
         needed_deals = task_list.gap / avg_unit_price
         insights.append(
             f"📈 目標ギャップ ¥{task_list.gap:,.0f} → "
-            f"あと約{needed_deals:.1f}件の受注が必要。MQL掘り起こしで埋められる可能性あり"
+            f"あと約 *{needed_deals:.1f}件* の受注が必要。MQLプールから掘り起こしでカバーできる可能性あり"
         )
 
     # 6. クロージング案件の金額合計

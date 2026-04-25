@@ -409,12 +409,30 @@ class TaskEngine:
 
         return tasks
 
+    def _is_current_month_deal(self, deal: dict) -> bool:
+        """G列（受注予測月）が当月かどうか判定"""
+        forecast = _s(deal.get("forecast_month"))
+        if not forecast:
+            return False
+        # "4月（26Y）" → 4月 を抽出してマッチ
+        month = self.today.month
+        year_short = self.today.year % 100  # 2026 → 26
+        # パターン: "4月（26Y）" or "4月" or "2026/4"
+        if f"{month}月（{year_short}Y）" in forecast:
+            return True
+        if f"{month}月" == forecast.strip():
+            return True
+        return False
+
     def _calculate_forecast(self, deals: list[dict]) -> int:
-        """受注予測金額を計算"""
+        """当月の受注予測金額を計算（G列=受注予測月が当月の案件のみ）"""
         total = 0
         win_rates = self.config.get("forecast", {}).get("win_rates", {})
 
         for deal in deals:
+            if not self._is_current_month_deal(deal):
+                continue
+
             status = _s(deal.get("status"))
             profit = deal.get("gross_profit")
             if not profit or not isinstance(profit, (int, float)):
@@ -426,7 +444,7 @@ class TaskEngine:
             if status == "求まる済み":
                 rate = win_rates.get("求まる済み", 0.33)
                 if is_difficult:
-                    rate *= 0.5  # 難あり割引（簡易版）
+                    rate *= 0.5
                 total += profit * rate
             elif status == "面接セット済み":
                 rate = win_rates.get("面接セット済み", 0.35)
@@ -442,9 +460,11 @@ class TaskEngine:
         return int(total)
 
     def _calculate_current_revenue(self, deals: list[dict]) -> int:
-        """当月の確定受注金額（内定承諾以上）"""
+        """当月の確定受注金額（G列=受注予測月が当月 かつ 内定承諾以上）"""
         total = 0
         for deal in deals:
+            if not self._is_current_month_deal(deal):
+                continue
             status = _s(deal.get("status"))
             if status in ("内定承諾", "請求管理シート反映済み", "入金確認済み"):
                 profit = deal.get("gross_profit")
