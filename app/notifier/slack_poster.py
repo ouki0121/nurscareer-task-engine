@@ -41,7 +41,7 @@ def format_task_list(task_list: AgentTaskList) -> str:
     weekday = ["月", "火", "水", "木", "金", "土", "日"][today.weekday()]
 
     lines = []
-    lines.append(f"🔔 *{task_list.agent_name}さんの今日のタスク*（{today.month}/{today.day} {weekday}）")
+    lines.append(f"🔔 *{task_list.agent_name}さんのセールスアシスタント*（{today.month}/{today.day} {weekday}）")
     lines.append("━" * 20)
 
     # 進捗サマリー

@@ -15,12 +15,18 @@ def load_config() -> dict:
 
 def get_sheets_client(credentials_path: Optional[str] = None) -> gspread.Client:
     config = load_config()
-    creds_path = credentials_path or os.path.expanduser(config["gcp"]["credentials_path"])
     scopes = [
-        "https://www.googleapis.com/auth/spreadsheets.readonly",
+        "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive.readonly",
     ]
-    credentials = Credentials.from_service_account_file(creds_path, scopes=scopes)
+    # Cloud Run: ADC（Application Default Credentials）を使用
+    # ローカル: サービスアカウントキーファイルを使用
+    creds_path = credentials_path or os.path.expanduser(config["gcp"]["credentials_path"])
+    if os.path.exists(creds_path):
+        credentials = Credentials.from_service_account_file(creds_path, scopes=scopes)
+    else:
+        import google.auth
+        credentials, _ = google.auth.default(scopes=scopes)
     return gspread.authorize(credentials)
 
 

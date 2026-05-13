@@ -82,8 +82,8 @@ def generate_tasks():
         ]
         logger.info(f"Loaded {len(invoices)} invoices")
 
-        # CA別目標（v1は空。v2でKPI週次から取得）
-        ca_targets = {}
+        # CA別目標をKPI週次シートから取得
+        ca_targets = _load_ca_targets_from_sheets(sheets_client, config)
 
         # タスク生成
         from .engine.task_generator import TaskEngine
@@ -136,6 +136,50 @@ def generate_tasks():
     except Exception as e:
         logger.error(f"Task generation failed: {e}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def _load_ca_targets_from_sheets(sheets_client, config: dict) -> dict:
+    """KPI管理（週次）シートからCA別月間目標金額を取得"""
+    from datetime import date
+    try:
+        spreadsheet = sheets_client.open_by_key(config["sheets"]["spreadsheet_id"])
+        ws = spreadsheet.worksheet("KPI管理（週次）")
+        all_values = ws.get_all_values()
+
+        # ヘッダー行（row 4, index 3）から当月のALL列を見つける
+        header_row = all_values[3] if len(all_values) > 3 else []
+        current_month = date.today().month
+        month_col_idx = None
+        for i, cell in enumerate(header_row):
+            if f"{current_month}月ALL" in cell or f"{current_month}月(〜" in cell:
+                month_col_idx = i
+                break
+
+        if month_col_idx is None:
+            logger.warning(f"Could not find column for {current_month}月ALL")
+            return {}
+
+        # 「XX個人目標金額」の行を探してCA名と目標を取得
+        ca_targets = {}
+        for row in all_values:
+            if not row or len(row) <= month_col_idx:
+                continue
+            cell_a = row[0].strip()
+            if "個人目標金額" in cell_a:
+                # "和田個人目標金額" → "和田"
+                ca_name = cell_a.replace("個人目標金額", "").strip()
+                try:
+                    target = int(float(row[month_col_idx].replace(",", "").replace("¥", "").strip() or "0"))
+                    if target > 0:
+                        ca_targets[ca_name] = target
+                        logger.info(f"CA target: {ca_name} = ¥{target:,}")
+                except (ValueError, IndexError):
+                    pass
+
+        return ca_targets
+    except Exception as e:
+        logger.warning(f"Failed to load CA targets: {e}")
+        return {}
 
 
 if __name__ == "__main__":

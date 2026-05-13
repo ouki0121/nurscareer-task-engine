@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ヨミ表 棚卸しガイドライン</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: #0f172a; color: #e2e8f0; }
+.page { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+h1 { font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+.subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 40px; }
+h2 { font-size: 20px; font-weight: 800; color: #fff; margin: 32px 0 16px; padding-left: 12px; border-left: 4px solid #6366f1; }
+h3 { font-size: 16px; font-weight: 700; color: #fff; margin: 20px 0 8px; }
+.lead { font-size: 13px; color: #94a3b8; line-height: 1.7; margin-bottom: 16px; }
+
+/* ステータス定義カード */
+.status-card {
+  background: #1e293b; border-radius: 12px; padding: 16px 20px; margin-bottom: 8px;
+  display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start;
+  border-left: 5px solid;
+}
+.status-card .s-name { font-size: 15px; font-weight: 800; }
+.status-card .s-owner { font-size: 10px; margin-top: 4px; }
+.status-card .s-def { font-size: 13px; line-height: 1.7; color: #cbd5e1; }
+.status-card .s-action { font-size: 12px; color: #fbbf24; margin-top: 6px; font-weight: 700; }
+
+.sc-form { border-left-color: #ef4444; }
+.sc-sql { border-left-color: #3b82f6; }
+.sc-match { border-left-color: #d97706; }
+.sc-interview { border-left-color: #ea580c; }
+.sc-offer { border-left-color: #16a34a; }
+.sc-accepted { border-left-color: #059669; }
+.sc-fail { border-left-color: #f87171; }
+.sc-early { border-left-color: #f97316; }
+.sc-invoice { border-left-color: #0891b2; }
+.sc-paid { border-left-color: #4338ca; }
+.sc-mql { border-left-color: #8b5cf6; }
+
+/* 判断フロー */
+.decision-box {
+  background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px;
+}
+.decision-q {
+  font-size: 14px; font-weight: 700; color: #fbbf24; margin-bottom: 12px;
+}
+.decision-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.decision-opt {
+  background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; font-size: 12px; line-height: 1.6;
+}
+.decision-opt .ans { font-weight: 700; margin-bottom: 4px; }
+.opt-yes .ans { color: #34d399; }
+.opt-no .ans { color: #f87171; }
+.opt-maybe .ans { color: #60a5fa; }
+.opt-action { color: #94a3b8; }
+
+/* 新レコードルール */
+.rule-box {
+  background: rgba(251,191,36,0.08); border: 1.5px solid #fbbf24; border-radius: 12px;
+  padding: 20px; margin-bottom: 12px;
+}
+.rule-box h3 { color: #fbbf24; margin: 0 0 10px; }
+.rule-step { display: flex; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+.rule-num {
+  background: #fbbf24; color: #0f172a; font-weight: 900; font-size: 12px;
+  width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+}
+
+/* チェックリスト */
+.checklist { list-style: none; }
+.checklist li {
+  font-size: 13px; line-height: 2; padding-left: 28px; position: relative;
+  color: #cbd5e1;
+}
+.checklist li::before {
+  content: "☐"; position: absolute; left: 0; font-size: 16px; color: #64748b;
+}
+
+/* 警告 */
+.warn-box {
+  background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 10px;
+  padding: 16px; margin: 16px 0; font-size: 13px; color: #fca5a5; line-height: 1.7;
+}
+.warn-box b { color: #ef4444; }
+
+/* テーブル */
+.guide-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; margin-bottom: 16px; }
+.guide-table td { padding: 10px 14px; font-size: 12px; background: #1e293b; }
+.guide-table td:first-child { border-radius: 6px 0 0 6px; color: #94a3b8; width: 160px; }
+.guide-table td:nth-child(2) { color: #6366f1; font-weight: 900; text-align: center; width: 30px; }
+.guide-table td:nth-child(3) { color: #fff; font-weight: 700; width: 160px; }
+.guide-table td:last-child { border-radius: 0 6px 6px 0; color: #94a3b8; }
+
+footer { text-align: center; color: #475569; font-size: 11px; padding: 32px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>ヨミ表 棚卸しガイドライン</h1>
+  <p class="subtitle">CA 1-on-1 棚卸しセッション用 ｜ ステータス定義・変更ルール・新レコード作成ルール</p>
+
+  <!-- ===== 棚卸しの目的 ===== -->
+  <h2>棚卸しの目的</h2>
+  <p class="lead">
+    ヨミ表の全レコードを見直し、<b style="color:#fbbf24;">ステータスを現実と一致させる。</b><br>
+    正しいステータス = AIが正しいタスクを出せる = あなたの売上が上がる。
+  </p>
+  <div class="warn-box">
+    <b>棚卸し前に確認:</b> ヨミ表の1行 = 1つの「取引」。求職者1人ではない。<br>
+    同じ人でも別の転職活動なら別の行。既存の行を書き換えるのではなく、新しい行を追加するケースがある（後述）。
+  </div>
+
+  <!-- ===== ステータス定義 ===== -->
+  <h2>ステータス定義（M列）— 全11種</h2>
+  <p class="lead">「今この取引はどの状態か？」で選ぶ。迷ったら下の判断フローを参照。</p>
+
+  <div class="status-card sc-form">
+    <div><div class="s-name" style="color:#ef4444;">フォーム回答</div><div class="s-owner" style="color:#fca5a5;">担当制</div></div>
+    <div>
+      <div class="s-def">問い合わせが入り、まだ初回アポ〜求人紹介に至っていない状態。</div>
+      <div class="s-action">やること: 即日架電。アポを取って求人探索へ進める</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-sql">
+    <div><div class="s-name" style="color:#3b82f6;">SQL</div><div class="s-owner" style="color:#93c5fd;">担当制（自分の資産）</div></div>
+    <div>
+      <div class="s-def">転職時期が先だが、自分の取引として確保しておきたい案件。<br><b>G列（受注予測月）を必ず明記すること。</b>受注月が来たらアタック開始。</div>
+      <div class="s-action">やること: 受注月の1ヶ月前にアタック開始。それまでナーチャリング</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-match">
+    <div><div class="s-name" style="color:#d97706;">求まる済み</div><div class="s-owner" style="color:#fbbf24;">担当制 / 受注角度33%</div></div>
+    <div>
+      <div class="s-def">求人紹介が完了し、事業者から「この候補者で進めたい」と了承（求まる）を得た状態。</div>
+      <div class="s-action">やること: 7日以内に事まる取得→面接日程確定を急ぐ</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-interview">
+    <div><div class="s-name" style="color:#ea580c;">面接セット済み</div><div class="s-owner" style="color:#fdba74;">担当制 / 受注角度35%</div></div>
+    <div>
+      <div class="s-def">面接日程が確定している状態。X列（面接予定日）に日付を入れる。</div>
+      <div class="s-action">やること: 面接当日中に結果確認→即フォロー→クロージング</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-offer">
+    <div><div class="s-name" style="color:#16a34a;">内定提示</div><div class="s-owner" style="color:#4ade80;">担当制 / 受注角度90%</div></div>
+    <div>
+      <div class="s-def">事業者から内定が出ている状態。あとは求職者の承諾を取るだけ。</div>
+      <div class="s-action">やること: 即日クロージング。承諾を取り切る</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-accepted">
+    <div><div class="s-name" style="color:#059669;">内定承諾</div><div class="s-owner" style="color:#34d399;">担当制 / 受注角度100%</div></div>
+    <div>
+      <div class="s-def">求職者が内定を承諾した状態。請求管理シートへの移行が必要。</div>
+      <div class="s-action">やること: ★請求管理シートに請求情報を記載→ステータスを「請求管理シート反映済み」に変更</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-fail">
+    <div><div class="s-name" style="color:#f87171;">不合格・再調整中</div><div class="s-owner" style="color:#fca5a5;">担当制</div></div>
+    <div>
+      <div class="s-def">面接で不合格。別の求人を探索して再チャレンジ中。</div>
+      <div class="s-action">やること: 別求人で求まる取得→「求まる済み」に復帰。紹介不可なら「MQL」にリリース</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-early">
+    <div><div class="s-name" style="color:#f97316;">早期退職（返金）</div><div class="s-owner" style="color:#fdba74;">担当制</div></div>
+    <div>
+      <div class="s-def">入職後に早期退職・入職辞退が発生。返金処理中。</div>
+      <div class="s-action">やること: 再転職意向を確認。意向あり→新レコード作成。なし→MQLリリース</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-invoice">
+    <div><div class="s-name" style="color:#0891b2;">請求管理シート反映済み</div><div class="s-owner" style="color:#67e8f9;">—</div></div>
+    <div>
+      <div class="s-def">請求情報が★請求管理シートに記載済み。入金待ち。</div>
+      <div class="s-action">やること: 入金確認したら「入金確認済み」に変更</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-paid">
+    <div><div class="s-name" style="color:#818cf8;">入金確認済み</div><div class="s-owner" style="color:#a5b4fc;">—</div></div>
+    <div>
+      <div class="s-def">入金完了。入社後フォロー対象（成約者アセット）。</div>
+      <div class="s-action">やること: 入職月+2ヶ月からフォロー開始。2ヶ月スパンで定期連絡</div>
+    </div>
+  </div>
+
+  <div class="status-card sc-mql">
+    <div><div class="s-name" style="color:#a5b4fc;">MQL</div><div class="s-owner" style="color:#c4b5fd;">共有（担当なし）</div></div>
+    <div>
+      <div class="s-def">担当がいない共有プール。<b>誰でも掘り起こしOK。早い者勝ち。</b><br>
+      音信不通・失注・対応不要・紹介不可 → すべてここに戻す。<b>「クローズ」はない。</b></div>
+      <div class="s-action">やること: 目標にギャップがあるとき、ここから掘り起こす</div>
+    </div>
+  </div>
+
+  <!-- ===== 廃止ステータス ===== -->
+  <h2>廃止ステータス — 見つけたら変更する</h2>
+  <p class="lead">以下のステータスが残っていたら、棚卸しで正しいステータスに変更してください。</p>
+
+  <table class="guide-table">
+    <tr><td>取引クローズ</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>クローズという概念はない。全てMQLに戻す</td></tr>
+    <tr><td>失注（他社流れ）</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>他社に決まっても将来掘り起こし可能</td></tr>
+    <tr><td>音信不通</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>連絡が取れなくなった。MQLに戻す</td></tr>
+    <tr><td>対象外</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>MQLに戻す</td></tr>
+    <tr><td>転職取りやめ</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>将来また転職するかもしれない。MQLに</td></tr>
+    <tr><td>着席</td><td>→</td><td>状況による</td><td>フォーム回答 or 求まる済みに変更</td></tr>
+    <tr><td>受注済み顧客</td><td>→</td><td style="color:#059669;">内定承諾</td><td>請求管理シートに移行してステータス変更</td></tr>
+    <tr><td>1/2/3回目フォロー済み</td><td>→</td><td style="color:#818cf8;">入金確認済み</td><td>フォローはAIが管理。ステータスは入金確認済みに統一</td></tr>
+  </table>
+
+  <!-- ===== 棚卸し判断フロー ===== -->
+  <h2>棚卸し判断フロー — 迷ったらこれで判断</h2>
+
+  <div class="decision-box">
+    <div class="decision-q">Q1. この取引、今動いてる？（直近30日以内にアクションした？）</div>
+    <div class="decision-options">
+      <div class="decision-opt opt-yes">
+        <div class="ans">はい → 現在のステータスが正しいか確認</div>
+        <div class="opt-action">U〜Z列の日付とM列のステータスが一致しているかチェック</div>
+      </div>
+      <div class="decision-opt opt-no">
+        <div class="ans">いいえ → Q2へ</div>
+        <div class="opt-action">30日以上動いてない取引は整理が必要</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision-box">
+    <div class="decision-q">Q2. この人、自分の取引として持っておきたい？</div>
+    <div class="decision-options">
+      <div class="decision-opt opt-yes">
+        <div class="ans">はい → SQLに変更</div>
+        <div class="opt-action">G列に受注予測月を必ず入れる。いつアタックするか明記する</div>
+      </div>
+      <div class="decision-opt opt-no">
+        <div class="ans">いいえ → MQLに変更</div>
+        <div class="opt-action">MQLプールに戻す。誰かが掘り起こせるようにリリース</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision-box">
+    <div class="decision-q">Q3. フォーム回答のまま10件以上残ってない？</div>
+    <div class="decision-options">
+      <div class="decision-opt opt-yes">
+        <div class="ans">10件以上ある → 整理が必要</div>
+        <div class="opt-action">1件ずつ: アポ済み→求まるに進める / 時期先→SQL / 不要→MQL</div>
+      </div>
+      <div class="decision-opt opt-no">
+        <div class="ans">10件未満 → OK</div>
+        <div class="opt-action">正常範囲。フォーム回答は10件以下が目安</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision-box">
+    <div class="decision-q">Q4. SQLが20件以上ない？受注予測月が過去になってるものない？</div>
+    <div class="decision-options">
+      <div class="decision-opt opt-yes">
+        <div class="ans">ある → 受注月を更新 or MQLに</div>
+        <div class="opt-action">一度連絡して状況確認。受注月を最新に更新。もう不要ならMQLに</div>
+      </div>
+      <div class="decision-opt opt-no">
+        <div class="ans">ない → OK</div>
+        <div class="opt-action">SQL20件以下かつ受注月が最新ならOK</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ステータス変更早見表 ===== -->
+  <h2>ステータス変更の早見表</h2>
+
+  <table class="guide-table">
+    <tr><td>フォーム回答</td><td>→</td><td>SQL</td><td>転職時期が先。自分の取引として確保。<b>受注月を必ず明記</b></td></tr>
+    <tr><td>フォーム回答</td><td>→</td><td>MQL</td><td>対応不要・時期不明。プールにリリース</td></tr>
+    <tr><td>フォーム回答</td><td>→</td><td>求まる済み</td><td>初回アポ済み + 求人紹介 + 求まる取得</td></tr>
+    <tr><td>SQL（時期到来）</td><td>→</td><td>求まる済み</td><td>受注月到来。アタック→アポ→求人紹介→求まる</td></tr>
+    <tr><td>求まる済み</td><td>→</td><td>面接セット済み</td><td>事まる取得 + 面接日程確定。X列に面接日を入力</td></tr>
+    <tr><td>面接セット済み</td><td>→</td><td>内定提示</td><td>面接合格。事業者から内定が出た</td></tr>
+    <tr><td>面接セット済み</td><td>→</td><td>不合格・再調整中</td><td>面接不合格。別求人探索 or MQLリリース</td></tr>
+    <tr><td>内定提示</td><td>→</td><td>内定承諾</td><td>求職者が承諾した</td></tr>
+    <tr><td>内定承諾</td><td>→</td><td>請求管理シート反映済み</td><td>★請求管理シートに記載完了</td></tr>
+    <tr><td>請求管理シート反映済み</td><td>→</td><td>入金確認済み</td><td>入金を確認</td></tr>
+    <tr><td style="color:#fbbf24;">どこからでも</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>対応不要・紹介不可・音信不通・失注 → <b>全てMQLへ</b></td></tr>
+  </table>
+
+  <!-- ===== 新レコード作成 ===== -->
+  <h2>新しい行を作るタイミング</h2>
+  <p class="lead">
+    <b style="color:#fbbf24;">既存の行は書き換えない。新しい行を追加する。</b>元の行はそのまま残す。
+  </p>
+
+  <div class="rule-box">
+    <h3>① MQL掘り起こし</h3>
+    <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">MQLステータスのものを掘り起こし、SQLとして確保する場合</p>
+    <div class="rule-step"><div class="rule-num">1</div><div>MQLプールから候補を見つけ、コンタクトを取る</div></div>
+    <div class="rule-step"><div class="rule-num">2</div><div>ヨミ表に<b style="color:#fbbf24;">新しい行を追加</b></div></div>
+    <div class="rule-step"><div class="rule-num">3</div><div>I列（新規流入チャネル）= <b style="color:#fbbf24;">「掘り起こし」</b></div></div>
+    <div class="rule-step"><div class="rule-num">4</div><div>M列 = <b>SQL</b>（時期先の場合）or <b>フォーム回答</b>（すぐ動ける場合）</div></div>
+    <div class="rule-step"><div class="rule-num">5</div><div>E列 = 自分の名前 / U列 = コンタクト取れた日 / G列 = 受注予測月</div></div>
+    <div class="rule-step"><div class="rule-num">!</div><div>元のMQLレコードは<b>触らない</b></div></div>
+  </div>
+
+  <div class="rule-box">
+    <h3>② 再転職</h3>
+    <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">以下のいずれかのステータスの人が再び転職する場合。全て同じ手順。</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+      <span style="background:rgba(249,115,22,0.2); color:#fdba74; padding:4px 10px; border-radius:6px; font-size:11px;">早期退職（返金）</span>
+      <span style="background:rgba(8,145,178,0.2); color:#67e8f9; padding:4px 10px; border-radius:6px; font-size:11px;">請求管理シート反映済み</span>
+      <span style="background:rgba(67,56,202,0.2); color:#a5b4fc; padding:4px 10px; border-radius:6px; font-size:11px;">入金確認済み</span>
+    </div>
+    <div class="rule-step"><div class="rule-num">1</div><div>再転職の意向を確認（フォロー or 本人からの連絡）</div></div>
+    <div class="rule-step"><div class="rule-num">2</div><div>意向あり → ヨミ表に<b style="color:#fbbf24;">新しい行を追加</b></div></div>
+    <div class="rule-step"><div class="rule-num">3</div><div>I列（新規流入チャネル）= <b style="color:#fbbf24;">「再転職」</b></div></div>
+    <div class="rule-step"><div class="rule-num">4</div><div>M列 = <b>SQL</b> / U列 = 再転職を進める言質を取れた日 / G列 = 受注予測月</div></div>
+    <div class="rule-step"><div class="rule-num">5</div><div>元の取引レコードは<b>そのまま残す</b></div></div>
+    <div class="rule-step"><div class="rule-num">!</div><div>意向なし（早期退職の場合）→ MQLにリリース</div></div>
+  </div>
+
+  <div class="rule-box">
+    <h3>③ リファラル（知人紹介）</h3>
+    <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">どのステータスの成約者からもあり得る。紹介された知人とコンタクトが取れた時点で作成。</p>
+    <div class="rule-step"><div class="rule-num">1</div><div>成約者から知人の紹介を受け、紹介者とコンタクトを取る</div></div>
+    <div class="rule-step"><div class="rule-num">2</div><div>ヨミ表に<b style="color:#fbbf24;">新しい行を追加</b></div></div>
+    <div class="rule-step"><div class="rule-num">3</div><div>I列（新規流入チャネル）= <b style="color:#fbbf24;">「知人紹介」</b></div></div>
+    <div class="rule-step"><div class="rule-num">4</div><div>U列 = <b>紹介者とコンタクトが取れた日</b></div></div>
+    <div class="rule-step"><div class="rule-num">5</div><div>以降は通常の新規リードと同じフロー</div></div>
+  </div>
+
+  <!-- ===== 1-on-1チェックリスト ===== -->
+  <h2>1-on-1 棚卸しチェックリスト</h2>
+  <p class="lead">CAと一緒に、上から順にチェックしていく。</p>
+
+  <ul class="checklist">
+    <li>廃止ステータス（取引クローズ・失注・音信不通・転職取りやめ等）が残っていないか → MQLに変更</li>
+    <li>フォーム回答が10件以上残っていないか → SQL or MQLに整理</li>
+    <li>フォーム回答で30日以上経過しているものはないか → SQL or MQL</li>
+    <li>SQLの受注予測月（G列）は全件入っているか → 入っていないものは明記する</li>
+    <li>SQLの受注予測月が過去日付のものはないか → 更新 or MQL</li>
+    <li>SQLが20件を超えていないか → 超えていたら受注月の精度を見直す</li>
+    <li>求まる済みで7日以上経過しているものはないか → 事まる取得を急ぐ</li>
+    <li>内定承諾のまま請求管理シートに未移行のものはないか → 移行する</li>
+    <li>入金確認済みで入社後フォローが必要な人はいないか → フォロー計画を確認</li>
+    <li>早期退職（返金）の案件はどうする？ → 再転職 or MQLリリース</li>
+  </ul>
+
+  <footer>ナースキャリア ヨミ表棚卸しガイドライン ｜ mela inc.</footer>
+</div>
+</body>
+</html>

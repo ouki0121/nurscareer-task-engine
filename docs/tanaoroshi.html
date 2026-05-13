@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ヨミ表 棚卸し — 初期セットアップ</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: #0f172a; color: #e2e8f0; }
+.page { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+h1 { font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 4px; }
+.subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 40px; }
+h2 { font-size: 20px; font-weight: 800; color: #fff; margin: 32px 0 16px; padding-left: 12px; border-left: 4px solid #6366f1; }
+h3 { font-size: 16px; font-weight: 700; color: #fff; margin: 20px 0 8px; }
+.lead { font-size: 13px; color: #94a3b8; line-height: 1.7; margin-bottom: 16px; }
+
+/* ステータス定義カード */
+.status-card {
+  background: #1e293b; border-radius: 12px; padding: 16px 20px; margin-bottom: 8px;
+  display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start;
+  border-left: 5px solid;
+}
+.status-card .s-name { font-size: 15px; font-weight: 800; }
+.status-card .s-owner { font-size: 10px; margin-top: 4px; }
+.status-card .s-def { font-size: 13px; line-height: 1.7; color: #cbd5e1; }
+.status-card .s-action { font-size: 12px; color: #fbbf24; margin-top: 6px; font-weight: 700; }
+
+.sc-form { border-left-color: #ef4444; }
+.sc-sql { border-left-color: #3b82f6; }
+.sc-match { border-left-color: #d97706; }
+.sc-interview { border-left-color: #ea580c; }
+.sc-offer { border-left-color: #16a34a; }
+.sc-accepted { border-left-color: #059669; }
+.sc-fail { border-left-color: #f87171; }
+.sc-early { border-left-color: #f97316; }
+.sc-invoice { border-left-color: #0891b2; }
+.sc-paid { border-left-color: #4338ca; }
+.sc-mql { border-left-color: #8b5cf6; }
+
+/* 判断フロー */
+.decision-box {
+  background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 16px;
+}
+.decision-q {
+  font-size: 14px; font-weight: 700; color: #fbbf24; margin-bottom: 12px;
+}
+.decision-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.decision-opt {
+  background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; font-size: 12px; line-height: 1.6;
+}
+.decision-opt .ans { font-weight: 700; margin-bottom: 4px; }
+.opt-yes .ans { color: #34d399; }
+.opt-no .ans { color: #f87171; }
+.opt-maybe .ans { color: #60a5fa; }
+.opt-action { color: #94a3b8; }
+
+/* 新レコードルール */
+.rule-box {
+  background: rgba(251,191,36,0.08); border: 1.5px solid #fbbf24; border-radius: 12px;
+  padding: 20px; margin-bottom: 12px;
+}
+.rule-box h3 { color: #fbbf24; margin: 0 0 10px; }
+.rule-step { display: flex; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+.rule-num {
+  background: #fbbf24; color: #0f172a; font-weight: 900; font-size: 12px;
+  width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0;
+}
+
+/* チェックリスト */
+.checklist { list-style: none; }
+.checklist li {
+  font-size: 13px; line-height: 2; padding-left: 28px; position: relative;
+  color: #cbd5e1;
+}
+.checklist li::before {
+  content: "☐"; position: absolute; left: 0; font-size: 16px; color: #64748b;
+}
+
+/* 警告 */
+.warn-box {
+  background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 10px;
+  padding: 16px; margin: 16px 0; font-size: 13px; color: #fca5a5; line-height: 1.7;
+}
+.warn-box b { color: #ef4444; }
+
+/* テーブル */
+.guide-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; margin-bottom: 16px; }
+.guide-table td { padding: 10px 14px; font-size: 12px; background: #1e293b; }
+.guide-table td:first-child { border-radius: 6px 0 0 6px; color: #94a3b8; width: 160px; }
+.guide-table td:nth-child(2) { color: #6366f1; font-weight: 900; text-align: center; width: 30px; }
+.guide-table td:nth-child(3) { color: #fff; font-weight: 700; width: 160px; }
+.guide-table td:last-child { border-radius: 0 6px 6px 0; color: #94a3b8; }
+
+footer { text-align: center; color: #475569; font-size: 11px; padding: 32px 0; }
+
+.nav-link {
+  display: block; margin: 32px 0; padding: 16px 20px;
+  background: rgba(99,102,241,0.1); border: 1px solid #6366f1; border-radius: 10px;
+  font-size: 14px; color: #a5b4fc; line-height: 1.6;
+}
+.nav-link a { color: #818cf8; text-decoration: underline; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>ヨミ表 棚卸し — 初期セットアップ</h1>
+  <p class="subtitle">CA 1-on-1 棚卸しセッション用 ｜ 今のデータを正しい状態にする一度きりの作業</p>
+
+  <!-- ===== 棚卸しの目的 ===== -->
+  <h2>棚卸しの目的</h2>
+  <p class="lead">
+    ヨミ表の全レコードを見直し、<b style="color:#fbbf24;">ステータスを現実と一致させる。</b><br>
+    正しいステータス = AIが正しいタスクを出せる = あなたの売上が上がる。
+  </p>
+  <div class="warn-box">
+    <b>棚卸し前に確認:</b> ヨミ表の1行 = 1つの「取引」。求職者1人ではない。<br>
+    同じ人でも別の転職活動なら別の行。既存の行を書き換えるのではなく、新しい行を追加するケースがある（後述）。
+  </div>
+
+  <!-- ===== 廃止ステータス ===== -->
+  <h2>廃止ステータス — 見つけたら変更する</h2>
+  <p class="lead">以下のステータスが残っていたら、棚卸しで正しいステータスに変更してください。</p>
+
+  <table class="guide-table">
+    <tr><td>取引クローズ</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>クローズという概念はない。全てMQLに戻す</td></tr>
+    <tr><td>失注（他社流れ）</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>他社に決まっても将来掘り起こし可能</td></tr>
+    <tr><td>音信不通</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>連絡が取れなくなった。MQLに戻す</td></tr>
+    <tr><td>対象外</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>MQLに戻す</td></tr>
+    <tr><td>転職取りやめ</td><td>→</td><td style="color:#a5b4fc;">MQL</td><td>将来また転職するかもしれない。MQLに</td></tr>
+    <tr><td>着席</td><td>→</td><td>状況による</td><td>フォーム回答 or 求まる済みに変更</td></tr>
+    <tr><td>受注済み顧客</td><td>→</td><td style="color:#059669;">内定承諾</td><td>請求管理シートに移行してステータス変更</td></tr>
+    <tr><td>1/2/3回目フォロー済み</td><td>→</td><td style="color:#818cf8;">入金確認済み</td><td>フォローはAIが管理。ステータスは入金確認済みに統一</td></tr>
+  </table>
+
+  <!-- ===== 棚卸し判断フロー ===== -->
+  <h2>棚卸し判断フロー — 迷ったらこれで判断</h2>
+
+  <div class="decision-box">
+    <div class="decision-q">Q1. この取引、今動いてる？（直近30日以内にアクションした？）</div>
+    <div class="decision-options">
+      <div class="decision-opt opt-yes">
+        <div class="ans">はい → 現在のステータスが正しいか確認</div>
+        <div class="opt-action">U〜Z列の日付とM列のステータスが一致しているかチェック</div>
+      </div>
+      <div class="decision-opt opt-no">
+        <div class="ans">いいえ → Q2へ</div>
+        <div class="opt-action">30日以上動いてない取引は整理が必要</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision-box">
+    <div class="decision-q">Q2. この人、自分の取引として持っておきたい？</div>
+    <div class="decision-options">
+      <div class="decision-opt opt-yes">
+        <div class="ans">はい → SQLに変更</div>
+        <div class="opt-action">G列に受注予測月を必ず入れる。いつアタックするか明記する</div>
+      </div>
+      <div class="decision-opt opt-no">
+        <div class="ans">いいえ → MQLに変更</div>
+        <div class="opt-action">MQLプールに戻す。誰かが掘り起こせるようにリリース</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision-box">
+    <div class="decision-q">Q3. フォーム回答のまま10件以上残ってない？</div>
+    <div class="decision-options">
+      <div class="decision-opt opt-yes">
+        <div class="ans">10件以上ある → 整理が必要</div>
+        <div class="opt-action">1件ずつ: アポ済み→求まるに進める / 時期先→SQL / 不要→MQL</div>
+      </div>
+      <div class="decision-opt opt-no">
+        <div class="ans">10件未満 → OK</div>
+        <div class="opt-action">正常範囲。フォーム回答は10件以下が目安</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="decision-box">
+    <div class="decision-q">Q4. SQLが20件以上ない？受注予測月が過去になってるものない？</div>
+    <div class="decision-options">
+      <div class="decision-opt opt-yes">
+        <div class="ans">ある → 受注月を更新 or MQLに</div>
+        <div class="opt-action">一度連絡して状況確認。受注月を最新に更新。もう不要ならMQLに</div>
+      </div>
+      <div class="decision-opt opt-no">
+        <div class="ans">ない → OK</div>
+        <div class="opt-action">SQL20件以下かつ受注月が最新ならOK</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 1-on-1チェックリスト ===== -->
+  <h2>1-on-1 棚卸しチェックリスト</h2>
+  <p class="lead">CAと一緒に、上から順にチェックしていく。</p>
+
+  <ul class="checklist">
+    <li>廃止ステータス（取引クローズ・失注・音信不通・転職取りやめ等）が残っていないか → MQLに変更</li>
+    <li>フォーム回答が10件以上残っていないか → SQL or MQLに整理</li>
+    <li>フォーム回答で30日以上経過しているものはないか → SQL or MQL</li>
+    <li>SQLの受注予測月（G列）は全件入っているか → 入っていないものは明記する</li>
+    <li>SQLの受注予測月が過去日付のものはないか → 更新 or MQL</li>
+    <li>SQLが20件を超えていないか → 超えていたら受注月の精度を見直す</li>
+    <li>求まる済みで7日以上経過しているものはないか → 事まる取得を急ぐ</li>
+    <li>内定承諾のまま請求管理シートに未移行のものはないか → 移行する</li>
+    <li>入金確認済みで入社後フォローが必要な人はいないか → フォロー計画を確認</li>
+    <li>早期退職（返金）の案件はどうする？ → 再転職 or MQLリリース</li>
+  </ul>
+
+  <!-- ===== ナビゲーション ===== -->
+  <div class="nav-link">
+    棚卸しが終わったら → <a href='management.html'>ヨミ表マネジメントガイドライン</a> を日常運用の参考にしてください
+  </div>
+
+  <footer>ナースキャリア ヨミ表棚卸し ｜ mela inc.</footer>
+</div>
+</body>
+</html>
