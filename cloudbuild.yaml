@@ -18,6 +18,7 @@ steps:
       - '--platform'
       - 'managed'
       - '--no-allow-unauthenticated'
+      - '--service-account=bigquery-mcp@skilled-loader-457802-c9.iam.gserviceaccount.com'
       - '--set-secrets=SLACK_BOT_TOKEN=adpilot-slack-bot-token:latest'
       - '--memory'
       - '512Mi'
@@ -25,3 +26,6 @@ steps:
       - '300'
       - '--max-instances'
       - '1'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
