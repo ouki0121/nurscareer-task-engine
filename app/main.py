@@ -114,13 +114,14 @@ def generate_tasks():
                 "results": results,
             })
 
-        # Slack投稿
+        # Slack投稿（共通チャネルにCA別1メッセージずつ）
         from .notifier.slack_poster import get_slack_client, post_tasks_to_slack
         slack_client = get_slack_client()
+        task_channel = config.get("slack", {}).get("task_channel")
 
         results = {}
         for agent_name, task_list in all_tasks.items():
-            success = post_tasks_to_slack(slack_client, task_list)
+            success = post_tasks_to_slack(slack_client, task_list, channel=task_channel)
             results[agent_name] = {
                 "task_count": len(task_list.tasks),
                 "posted": success,

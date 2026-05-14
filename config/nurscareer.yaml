@@ -45,6 +45,7 @@ sync:
 
 slack:
   new_lead_channel: "C0959EFEA4Q"  # 新規リード通知チャネル
+  task_channel: "C06HGMK7693"      # セールスアシスタント タスク投稿先（CA別に1メッセージずつ）
 
 # ステータス定義（M列 確定版 2026-04-25）
 statuses:
